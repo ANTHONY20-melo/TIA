@@ -1,0 +1,80 @@
+{
+  "pacientes": [],
+  "financeiro": {
+    "total": 1120,
+    "historico": [
+      {
+        "data": "04/03/2026",
+        "hora": "15:01:30",
+        "paciente": "Anthony Belmon de Melo",
+        "servico": "Consulta",
+        "valor": 550,
+        "metodo": "Dinheiro"
+      },
+      {
+        "data": "04/03/2026",
+        "hora": "15:03:02",
+        "paciente": "Elisa dos Santos",
+        "servico": "Exame",
+        "valor": 90,
+        "metodo": "Pix"
+      },
+      {
+        "data": "04/03/2026",
+        "hora": "15:03:38",
+        "paciente": "Anthony",
+        "servico": "Retorno",
+        "valor": 100,
+        "metodo": "Cartão de Crédito"
+      },
+      {
+        "data": "04/03/2026",
+        "hora": "15:10:00",
+        "paciente": "Toniel Felix",
+        "servico": "Consulta",
+        "valor": 90,
+        "metodo": "Cartão de Crédito"
+      },
+      {
+        "data": "04/03/2026",
+        "hora": "16:30:02",
+        "paciente": "Anthony",
+        "servico": "Exame",
+        "valor": 80,
+        "metodo": "Dinheiro"
+      },
+      {
+        "data": "04/03/2026",
+        "hora": "17:08:59",
+        "paciente": "Anthony",
+        "servico": "Consulta",
+        "valor": 10,
+        "metodo": "Dinheiro"
+      },
+      {
+        "data": "04/03/2026",
+        "hora": "22:46:55",
+        "paciente": "Priscila",
+        "servico": "Retorno",
+        "valor": 80,
+        "metodo": "Cartão de Crédito"
+      },
+      {
+        "data": "05/03/2026",
+        "hora": "13:32:08",
+        "paciente": "Anthony Melo",
+        "servico": "Consulta",
+        "valor": 20,
+        "metodo": "Cartão"
+      },
+      {
+        "data": "05/03/2026",
+        "hora": "15:33:19",
+        "paciente": "Anthony",
+        "servico": "Retorno",
+        "valor": 100,
+        "metodo": "Cartão"
+      }
+    ]
+  }
+}

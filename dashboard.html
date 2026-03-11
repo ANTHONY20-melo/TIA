@@ -1,0 +1,243 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel SBM | Gestão Médica Profissional</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #0056b3; --secondary: #00b4d8; --success: #2ecc71;
+            --danger: #e74c3c; --warning: #f1c40f; --bg-body: #f4f7f6;
+            --bg-card: #ffffff; --text-main: #333; --shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: var(--bg-body); color: var(--text-main); }
+        .dashboard-container { display: flex; min-height: 100vh; }
+        .sidebar { width: 260px; background: #1a1c23; color: white; padding: 25px; position: fixed; height: 100%; }
+        .sidebar h2 { font-size: 1.4rem; margin-bottom: 30px; color: var(--secondary); text-align: center; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .sidebar nav ul { list-style: none; }
+        .sidebar nav li { padding: 12px 15px; margin-bottom: 8px; border-radius: 8px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 12px; }
+        .sidebar nav li:hover { background: #2d303e; }
+        .sidebar nav li.active { background: var(--primary); }
+        .main-content { margin-left: 260px; flex: 1; padding: 40px; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: var(--shadow); border-left: 5px solid var(--primary); }
+        section { background: var(--bg-card); padding: 25px; border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { text-align: left; padding: 15px; background: #f8f9fa; font-size: 0.85rem; }
+        td { padding: 15px; border-bottom: 1px solid #eee; }
+        .status-badge { background: #e8f5e9; color: #2e7d32; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
+        .btn-action { border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-call { background: var(--secondary); color: white; }
+        .btn-done { background: var(--success); color: white; }
+        #modal-pagamento { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; backdrop-filter: blur(5px); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 15px; width: 400px; }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+    <div id="modal-pagamento">
+        <div class="modal-content">
+            <h2><i class="fas fa-cash-register"></i> Checkout</h2>
+            <div id="info-modal-paciente" style="margin: 15px 0; padding: 10px; background: #f9f9f9; border-radius: 5px;"></div>
+            <label>Valor (R$)</label>
+            <input type="number" id="modal-valor" placeholder="0.00">
+            <label>Método</label>
+            <select id="modal-metodo">
+                <option value="Pix">Pix</option>
+                <option value="Cartão">Cartão</option>
+                <option value="Dinheiro">Dinheiro</option>
+            </select>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="confirmarCheckout()" id="btn-confirmar" class="btn-action btn-done" style="flex:2; justify-content: center;">Confirmar</button>
+                <button onclick="fecharModal()" class="btn-action" style="flex:1; justify-content: center;">Sair</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <h2>SBM CLÍNICA</h2>
+            <nav>
+                <ul>
+                    <li class="active" onclick="navegar('sessao-fila')"><i class="fas fa-users"></i> Fila</li>
+                    <li id="menu-admin" style="display:none;" onclick="navegar('aba-financeira')"><i class="fas fa-wallet"></i> Financeiro</li>
+                    <li onclick="logout()" style="color: var(--danger); margin-top: 50px;"><i class="fas fa-sign-out-alt"></i> Sair</li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header style="margin-bottom: 30px; display: flex; justify-content: space-between;">
+                <div>
+                    <h1 id="boas-vindas">Dashboard SBM</h1>
+                    <p id="data-atual" style="color: #888;"></p>
+                </div>
+                <span id="label-role" style="font-weight: bold; background: #ddd; padding: 5px 10px; border-radius: 5px;"></span>
+            </header>
+
+            <div id="sessao-fila">
+                <div class="card-grid">
+                    <div class="card"><p>Aguardando</p><h3 id="contagem-fila">0</h3></div>
+                    <div class="card" style="border-left-color: var(--success);"><p>Receita Hoje</p><h3 id="receita-hoje">R$ 0,00</h3></div>
+                </div>
+
+                <section>
+                    <h3><i class="fas fa-user-plus"></i> Novo Paciente</h3>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; margin-top: 15px;">
+                        <input type="text" id="add-nome" placeholder="Nome completo">
+                        <input type="time" id="add-hora">
+                        <select id="add-servico">
+                            <option value="Consulta">Consulta</option>
+                            <option value="Retorno">Retorno</option>
+                            <option value="Exame">Exame</option>
+                        </select>
+                        <button onclick="registrarEntrada()" class="btn-action btn-call">Adicionar</button>
+                    </div>
+                </section>
+
+                <section>
+                    <h3><i class="fas fa-list"></i> Fila de Espera</h3>
+                    <table>
+                        <thead><tr><th>Paciente</th><th>Hora</th><th>Serviço</th><th>Status</th><th>Ações</th></tr></thead>
+                        <tbody id="corpo-tabela-pacientes"></tbody>
+                    </table>
+                </section>
+            </div>
+
+            <div id="aba-financeira" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>Relatório de Faturamento</h2>
+                    <button onclick="fecharCaixa()" class="btn-action btn-done"><i class="fas fa-file-excel"></i> Fechar Caixa (.xlsx)</button>
+                </div>
+                <div class="card-grid">
+                    <div class="card" style="border-left-color: var(--success);"><p>Total Bruto</p><h3 id="fin-total">R$ 0</h3></div>
+                    <div class="card" style="border-left-color: #9b59b6;"><p>Atendimentos</p><h3 id="fin-qtd">0</h3></div>
+                </div>
+                <section style="height: 350px;">
+                    <canvas id="chartFinanceiro"></canvas>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        const API_BASE = "http://localhost:3000";
+        const USER_ROLE = localStorage.getItem('role') || 'user';
+        let state = { pacientes: [], financeiro: { total: 0, historico: [] }, chart: null };
+        let activePatientId = null;
+
+        window.onload = async () => {
+            document.getElementById('data-atual').innerText = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+            document.getElementById('label-role').innerText = USER_ROLE === 'admin' ? "ADMIN" : "RECEPÇÃO";
+            if (USER_ROLE === 'admin') document.getElementById('menu-admin').style.display = 'block';
+            await refreshData();
+            initChart();
+        };
+
+        async function refreshData() {
+            try {
+                const [resPac, resFin] = await Promise.all([fetch(`${API_BASE}/pacientes`), fetch(`${API_BASE}/financeiro`)]);
+                state.pacientes = await resPac.json();
+                state.financeiro = await resFin.json();
+                renderQueue();
+                updateKpis();
+                if(state.chart) updateChart();
+            } catch (err) { console.error("Erro ao sincronizar:", err); }
+        }
+
+        function renderQueue() {
+            const tbody = document.getElementById('corpo-tabela-pacientes');
+            tbody.innerHTML = state.pacientes.map((p, index) => `
+                <tr>
+                    <td><strong>${p.nome}</strong></td>
+                    <td>${p.hora}</td>
+                    <td>${p.servico}</td>
+                    <td><span class="status-badge">${p.status}</span></td>
+                    <td>
+                        <button class="btn-action btn-call" onclick="chamarPaciente('${p.nome}')">Chamar</button>
+                        <button class="btn-action btn-done" onclick="abrirCheckout(${index})">Pagar</button>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('contagem-fila').innerText = state.pacientes.length;
+        }
+
+        function updateKpis() {
+            document.getElementById('fin-total').innerText = state.financeiro.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('receita-hoje').innerText = state.financeiro.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('fin-qtd').innerText = state.financeiro.historico.length;
+        }
+
+        async function registrarEntrada() {
+            const nome = document.getElementById('add-nome').value;
+            const hora = document.getElementById('add-hora').value;
+            const servico = document.getElementById('add-servico').value;
+            if(!nome || !hora) return alert("Preencha os campos!");
+            await fetch(`${API_BASE}/pacientes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nome, hora, servico, status: 'Aguardando' })
+            });
+            document.getElementById('add-nome').value = "";
+            refreshData();
+        }
+
+        function abrirCheckout(index) {
+            activePatientId = index;
+            document.getElementById('info-modal-paciente').innerHTML = `Paciente: <b>${state.pacientes[index].nome}</b>`;
+            document.getElementById('modal-pagamento').style.display = 'flex';
+        }
+
+        async function confirmarCheckout() {
+            const valor = document.getElementById('modal-valor').value;
+            const metodo = document.getElementById('modal-metodo').value;
+            if(!valor) return alert("Valor obrigatório!");
+            
+            const response = await fetch(`${API_BASE}/pacientes/${activePatientId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ valor, metodo })
+            });
+            const data = await response.json();
+            
+            // Exporta comprovante individual automático em XLSX
+            if(data.transacao) exportarParaExcel([data.transacao], `Recibo_${data.transacao.paciente}`);
+
+            fecharModal();
+            refreshData();
+        }
+
+        function fecharModal() { document.getElementById('modal-pagamento').style.display = 'none'; }
+        function chamarPaciente(nome) { alert(`Chamando: ${nome}`); }
+        function navegar(id) { 
+            document.getElementById('sessao-fila').style.display = id === 'sessao-fila' ? 'block' : 'none';
+            document.getElementById('aba-financeira').style.display = id === 'aba-financeira' ? 'block' : 'none';
+        }
+        function logout() { window.location.href = 'index.html'; }
+
+        function initChart() {
+            const ctx = document.getElementById('chartFinanceiro').getContext('2d');
+            state.chart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: ['Consulta', 'Retorno', 'Exame'], datasets: [{ label: 'Faturamento R$', data: [0, 0, 0], backgroundColor: '#0056b3' }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        function updateChart() {
+            const calc = (tipo) => state.financeiro.historico.filter(h => h.servico === tipo).reduce((acc, h) => acc + h.valor, 0);
+            state.chart.data.datasets[0].data = [calc('Consulta'), calc('Retorno'), calc('Exame')];
+            state.chart.update();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Sistema SBM</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary: #0056b3; --secondary: #00b4d8; --text: #1a2a3a; }
+        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f7f6; font-family: 'Segoe UI', system-ui, sans-serif; }
+        
+        .login-form { 
+            background: white; padding: 40px; border-radius: 12px; width: 100%; max-width: 380px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1); position: relative;
+        }
+
+        /* Botão Voltar Sênior */
+        .btn-voltar {
+            position: absolute; top: 15px; left: 15px; text-decoration: none;
+            color: #666; font-size: 14px; display: flex; align-items: center; gap: 5px;
+            transition: color 0.3s, transform 0.3s;
+        }
+        .btn-voltar:hover { color: var(--primary); transform: translateX(-3px); }
+
+        input { 
+            width: 100%; padding: 14px; margin: 10px 0; border: 1.5px solid #eee; 
+            border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; transition: border 0.3s;
+        }
+        input:focus { border-color: var(--secondary); }
+        
+        button { 
+            width: 100%; padding: 14px; background: var(--primary); color: white; 
+            border: none; border-radius: 8px; cursor: pointer; font-weight: 600; 
+            font-size: 16px; transition: 0.3s; margin-top: 10px;
+        }
+        button:hover { background: #004494; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,86,179,0.3); }
+        button:disabled { background: #ccc; cursor: not-allowed; transform: none; box-shadow: none; }
+    </style>
+</head>
+<body>
+    <div class="login-form">
+        <a href="index.html" class="btn-voltar">
+            <i class="fas fa-arrow-left"></i> Início
+        </a>
+
+        <h2 style="text-align: center; margin-bottom: 5px; color: var(--primary);">CLÍNICA SBM</h2>
+        <p style="text-align: center; margin-bottom: 25px; color: #666; font-size: 14px;">Acesso administrativo seguro</p>
+        
+        <input type="text" id="user" placeholder="Usuário" autofocus>
+        <input type="password" id="pass" placeholder="Senha">
+        
+        <button id="btn-login" onclick="autenticar()">Entrar no Sistema</button>
+        <p id="msg-erro" style="color: #e74c3c; text-align: center; margin-top: 15px; display: none; font-size: 14px;"></p>
+    </div>
+
+    <script>
+        document.addEventListener('keypress', (e) => e.key === 'Enter' && autenticar());
+
+        async function autenticar() {
+            const user = document.getElementById('user').value;
+            const pass = document.getElementById('pass').value;
+            const msgErro = document.getElementById('msg-erro');
+            const btn = document.getElementById('btn-login');
+
+            msgErro.style.display = 'none';
+            if (!user || !pass) {
+                msgErro.innerText = "Preencha todos os campos!";
+                msgErro.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Verificando...";
+
+            try {
+                const resposta = await fetch('http://localhost:3000/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario: user, senha: pass })
+                });
+
+                const data = await resposta.json();
+
+                if (data.logado) {
+                    localStorage.setItem('role', data.role);
+                    window.location.href = 'dashboard.html';
+                } else {
+                    msgErro.innerText = data.mensagem;
+                    msgErro.style.display = 'block';
+                    btn.disabled = false;
+                    btn.innerText = "Entrar no Sistema";
+                }
+            } catch (erro) {
+                msgErro.innerText = "Erro ao conectar com o servidor.";
+                msgErro.style.display = 'block';
+                btn.disabled = false;
+                btn.innerText = "Entrar no Sistema";
+            }
+        }
+    </script>
+</body>
+</html>
