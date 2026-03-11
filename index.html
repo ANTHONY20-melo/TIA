@@ -8,21 +8,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <header class="navbar">
-        <div class="container main-nav">
-            <div class="logo">
-                <i class="fas fa-stethoscope"></i> CLÍNICA <span>SBM</span>
-            </div>
-            <nav>
-                <ul class="nav-links">
-                    <li><a href="#inicio">Início</a></li>
-                    <li><a href="#sobre">Sobre</a></li>
-                    <li><a href="#especialidades">Especialidades</a></li>
-                    <li><a href="login.html" class="btn btn-login-outline">Acesso Restrito</a></li>
-                </ul>
-            </nav>
+    <header>
+    <div class="header-left">
+        <button id="btn-voltar" class="btn-voltar" onclick="window.location.href='index.html'" style="display:none;">
+            <span class="material-icons">arrow_back</span> Voltar
+        </button>
+        <h1>Painel de Controle</h1>
+    </div>
+    <div class="header-right">
+        <div class="user-info">
+            <span id="user-display-name"></span>
+            <img src="img/logo tia.jpeg" alt="Avatar">
         </div>
-    </header>
+    </div>
+</header>
 
     <main>
         <section id="inicio" class="hero">

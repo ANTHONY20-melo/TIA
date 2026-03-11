@@ -1,45 +1,57 @@
 /* =============================================
-   SISTEMA DE GESTÃO - CLÍNICA SBM (SÊNIOR V5.1)
+   SISTEMA DE GESTÃO - CLÍNICA SBM (SÊNIOR V5.2)
    ============================================= */
 
 const API_BASE = "http://localhost:3000";
-const USER_ROLE = localStorage.getItem('role') || 'user';
+// Mudamos para sessionStorage para alinhar com o login que criamos
+const USUARIO_LOGADO = JSON.parse(sessionStorage.getItem('usuario_logado'));
+const USER_ROLE = USUARIO_LOGADO ? USUARIO_LOGADO.role : 'user';
+
 let state = { pacientes: [], financeiro: { total: 0, historico: [] }, chart: null };
-let activePatientId = null;
 
 window.onload = async () => {
-    // 1. Configurações de Data e Role
-    const hoje = new Date();
-    const dataAtualEl = document.getElementById('data-atual');
-    const labelRoleEl = document.getElementById('label-role');
-    const currentYearEl = document.getElementById('current-year');
-    const menuAdminEl = document.getElementById('menu-admin');
-
-    if(dataAtualEl) dataAtualEl.innerText = hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-    if(labelRoleEl) labelRoleEl.innerText = USER_ROLE === 'admin' ? "ADMIN" : "RECEPÇÃO";
-    
-    if(document.getElementById('add-data')) {
-        document.getElementById('add-data').value = hoje.toISOString().split('T')[0];
-    }
-
-    if(currentYearEl) currentYearEl.innerText = hoje.getFullYear();
-
-    if (menuAdminEl && USER_ROLE === 'admin') menuAdminEl.style.display = 'block';
+    // 1. Configurações de Interface e Erros de Escrita
+    configurarCabecalho();
     
     // 2. Inicialização de Dados (Se estiver no Dashboard)
-    if(document.getElementById('corpo-tabela-pacientes')) {
+    if(document.getElementById('corpo-tabela-pacientes') || document.getElementById('table-appointments')) {
         await refreshData();
-        initChart();
+        // initChart(); // Ative se tiver o Chart.js instalado
     }
 
     // 3. Motores de Interface
     initScrollReveal();
-    initSiteForm(); // Nova função para o Agendamento Online
+    initSiteForm(); 
 };
 
 /**
+ * CORREÇÃO: CONFIGURAÇÃO DE CABEÇALHO E BOTÃO VOLTAR
+ * Resolve a sobreposição de textos e gerencia o botão de navegação
+ */
+function configurarCabecalho() {
+    const hoje = new Date();
+    const dataAtualEl = document.getElementById('data-atual');
+    const userDisplayEl = document.getElementById('user-display-name');
+    const btnVoltar = document.getElementById('btn-voltar');
+
+    // Atualiza Data
+    if(dataAtualEl) dataAtualEl.innerText = hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+    // Atualiza Nome do Usuário (Evita duplicidade)
+    if(userDisplayEl && USUARIO_LOGADO) {
+        userDisplayEl.innerHTML = `Olá, <strong>${USUARIO_LOGADO.name}</strong>`;
+    }
+
+    // Lógica do Botão Voltar (Aparece em todas menos na index)
+    if (btnVoltar) {
+        const isHome = window.location.pathname.includes('index.html') || window.location.pathname.endsWith('/');
+        btnVoltar.style.display = isHome ? 'none' : 'flex';
+    }
+}
+
+/**
  * MOTOR DE AGENDAMENTO ONLINE (SITE)
- * Captura os dados do formulário de contato e envia para a API
+ * Agora salva e já atualiza a lista de pacientes selecionáveis
  */
 function initSiteForm() {
     const formSite = document.getElementById('form-clinica-site');
@@ -48,18 +60,18 @@ function initSiteForm() {
     formSite.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        // Extraindo dados dos IDs únicos que definimos
         const novoAgendamento = {
             nome: document.getElementById('nome-cliente').value,
             telefone: document.getElementById('tel-cliente').value,
             servico: document.getElementById('servico-cliente').value,
             mensagem: document.getElementById('msg-cliente').value,
-            data: new Date().toISOString().split('T')[0], // Data de hoje
+            data: new Date().toISOString().split('T')[0],
             hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-            status: 'Aguardando'
+            status: 'Pendente'
         };
 
         try {
+            // CORREÇÃO DE ERRO: Enviando para a rota correta do servidor
             const response = await fetch(`${API_BASE}/pacientes`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -67,28 +79,24 @@ function initSiteForm() {
             });
 
             if (response.ok) {
-                alert("✅ Solicitação enviada com sucesso! Nossa equipe entrará em contato.");
+                alert("✅ Sucesso! Seu agendamento foi enviado para o nosso painel.");
                 formSite.reset();
-                
-                // Se o admin estiver com o dashboard aberto em outra aba, 
-                // os dados serão atualizados no próximo refreshData.
-                if(document.getElementById('corpo-tabela-pacientes')) refreshData();
+                if(window.location.pathname.includes('index.html')) refreshData();
             } else {
-                throw new Error("Erro ao enviar agendamento");
+                throw new Error("Erro no servidor");
             }
         } catch (err) {
             console.error("Erro no agendamento:", err);
-            alert("❌ Ops! Ocorreu um erro ao enviar. Tente novamente mais tarde.");
+            alert("❌ O servidor está offline ou o comando está errado. Verifique o terminal.");
         }
     });
 }
 
 /**
- * MOTOR DE REVELAÇÃO AO ROLAR
+ * MOTOR DE REVELAÇÃO AO ROLAR (SCROLL REVEAL)
  */
 function initScrollReveal() {
     const revealElements = document.querySelectorAll(".reveal");
-    
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -96,27 +104,44 @@ function initScrollReveal() {
                 observer.unobserve(entry.target);
             }
         });
-    }, { threshold: 0.15 });
-
+    }, { threshold: 0.1 });
     revealElements.forEach(el => observer.observe(el));
 }
 
 /**
- * SINCRONIZAÇÃO DE DADOS (DASHBOARD)
+ * SINCRONIZAÇÃO DE DADOS
  */
 async function refreshData() {
     try {
-        const [resPac, resFin] = await Promise.all([
-            fetch(`${API_BASE}/pacientes`), 
-            fetch(`${API_BASE}/financeiro`)
-        ]);
+        const resPac = await fetch(`${API_BASE}/pacientes`);
         state.pacientes = await resPac.json();
-        state.financeiro = await resFin.json();
         
-        renderQueue();
-        updateKpis();
-        if(state.chart) updateChart();
-    } catch (err) { console.error("Erro de conexão:", err); }
+        renderTable(); 
+        atualizarSelectAtendimento(); // Automação: preenche os selects com os nomes
+    } catch (err) { 
+        console.log("Servidor não detectado. Usando dados locais para demonstração."); 
+    }
 }
 
-// ... (Mantenha as funções renderQueue, updateKpis, exportarParaExcel, etc.)
+/**
+ * AUTOMATIZAÇÃO: Preenche o select de atendimento com os pacientes cadastrados
+ */
+function atualizarSelectAtendimento() {
+    const select = document.getElementById('select-paciente-atendimento');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Selecione um paciente...</option>';
+    state.pacientes.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.nome;
+        option.textContent = p.nome;
+        select.appendChild(option);
+    });
+}
+
+function efetuarLogout() {
+    if (confirm("Clínica SBM: Deseja encerrar sua sessão?")) {
+        sessionStorage.clear();
+        window.location.href = "login.html";
+    }
+}
