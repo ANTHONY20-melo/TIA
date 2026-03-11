@@ -63,12 +63,10 @@ app.post('/pacientes', (req, res) => {
     }
 
     const dados = lerBanco();
-    const novoPaciente = req.body;
     if (!dados.pacientes) dados.pacientes = [];
     dados.pacientes.push(novoPaciente);
     salvarBanco(dados);
     
-    console.log(`[FILA] Novo paciente cadastrado: ${novoPaciente.nome}`);
     console.log(`[FILA] Novo paciente/agendamento cadastrado: ${novoPaciente.nome}`);
     res.status(201).json({ mensagem: "Paciente cadastrado!" });
 });
