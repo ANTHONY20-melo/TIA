@@ -402,3 +402,26 @@ input:focus, select:focus, textarea:focus {
 #inicio .reveal {
     transition-duration: 1.2s;
 }
+/* Isso força o conteúdo a ocupar toda a largura disponível ao lado da sidebar */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 30px;
+    width: 100%; 
+}
+
+/* Isso faz os botões ficarem LADO A LADO em vez de um embaixo do outro */
+.shortcuts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    width: 100%;
+    margin: 20px 0;
+}
+
+/* Garante que os cards de atalho preencham o espaço */
+.card-shortcut {
+    width: 100%;
+    min-height: 150px;
+}
